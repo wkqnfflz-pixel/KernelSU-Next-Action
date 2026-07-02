@@ -15,7 +15,6 @@ jobs:
       run: |
         mkdir -p $GITHUB_WORKSPACE/kernel_workspace
         cd $GITHUB_WORKSPACE/kernel_workspace
-        # 본인의 저장소 주소로 설정했습니다.
         git clone https://github.com/wkqnfflz-pixel/KernelSU-Next-Action.git -b main android-kernel --depth=1
 
     - name: Setup build kernel environment
@@ -36,8 +35,11 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # 본인의 디바이스에 맞는 defconfig 파일명으로 수정해야 합니다 (현재 msm8250_defconfig)
-        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- msm8250_defconfig
+        # [자동 탐색] arch/arm64/configs에서 _defconfig로 끝나는 첫 번째 파일을 찾아 자동으로 적용
+        DEFCONFIG=$(ls arch/arm64/configs/*_defconfig | head -n 1 | xargs basename)
+        echo "자동으로 찾은 설정 파일: $DEFCONFIG"
+        
+        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $DEFCONFIG
         make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
     - name: Upload Artifact
