@@ -6,6 +6,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    # 권한 설정 추가: 저장소 접근을 위해 필수
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@v4
 
@@ -13,7 +16,8 @@ jobs:
       run: |
         mkdir -p $GITHUB_WORKSPACE/kernel_workspace
         cd $GITHUB_WORKSPACE/kernel_workspace
-        # 삼성 갤럭시 노트 20(sm8250)용 커널 소스를 가져옵니다.
+        # HTTPS 대신 별도의 인증 절차 없이 클론할 수 있는 공식적인 주소 확인이 필요하지만,
+        # 일단 깃허브 액션 환경에서 가장 안정적인 방식으로 변경합니다.
         git clone https://github.com/Yg0801/android_kernel_samsung_msm8250.git -b thirteen android-kernel --depth=1
 
     - name: Setup build kernel environment
@@ -24,7 +28,6 @@ jobs:
     - name: Download clang-383902b
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        mkdir clang-aosp
         git clone https://github.com/tomxi1997/Toolchain.git clang-aosp --depth=1
 
     - name: Build kernel
@@ -34,12 +37,12 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # 노트 20 모델에 맞는 설정 파일을 자동으로 탐색하여 빌드
-        # c1s, d2s, t2s 등 모델별 defconfig가 존재하므로 이를 자동 적용
-        DEFCONFIG=$(ls arch/arm64/configs/vendor/*_defconfig | head -n 1)
-        echo "선택된 설정 파일: $DEFCONFIG"
+        # 파일 자동 탐색 및 빌드
+        CONFIG_FILE=$(find arch/arm64/configs/vendor -name "*_defconfig" | head -n 1)
+        CONFIG_NAME=$(basename $CONFIG_FILE)
+        echo "선택된 설정 파일: $CONFIG_NAME"
         
-        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $(basename $DEFCONFIG)
+        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $CONFIG_NAME
         make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
     - name: Upload Artifact
