@@ -35,11 +35,12 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # [수동 설정] 본인의 디바이스용 defconfig 파일명을 아래에 적으세요
-        # 예시: DEFCONFIG=vendor/ginkgo_defconfig 또는 sm8250_defconfig
-        DEFCONFIG=msm8250_defconfig
+        # [핵심 수정] 저장소 내의 모든 *_defconfig 파일을 찾아 첫 번째 파일을 자동으로 사용합니다.
+        CONFIG_FILE=$(find arch/arm64/configs -name "*_defconfig" | head -n 1)
+        CONFIG_NAME=$(basename $CONFIG_FILE)
+        echo "빌드할 설정 파일: $CONFIG_NAME"
         
-        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $DEFCONFIG
+        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $CONFIG_NAME
         make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
     - name: Upload Artifact
