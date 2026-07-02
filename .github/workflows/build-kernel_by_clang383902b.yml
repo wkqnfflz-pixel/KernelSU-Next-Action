@@ -1,8 +1,6 @@
 name: Build kernel by clang-r383902b
 
 on:
-  watch:
-    types: [started]
   workflow_dispatch:
 
 jobs:
@@ -15,7 +13,8 @@ jobs:
       run: |
         mkdir -p $GITHUB_WORKSPACE/kernel_workspace
         cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone https://github.com/wkqnfflz-pixel/KernelSU-Next-Action.git -b main android-kernel --depth=1
+        # 삼성 갤럭시 노트 20(sm8250)용 커널 소스를 가져옵니다.
+        git clone https://github.com/Yg0801/android_kernel_samsung_msm8250.git -b thirteen android-kernel --depth=1
 
     - name: Setup build kernel environment
       run: |
@@ -35,12 +34,12 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # [핵심 수정] 저장소 내의 모든 *_defconfig 파일을 찾아 첫 번째 파일을 자동으로 사용합니다.
-        CONFIG_FILE=$(find arch/arm64/configs -name "*_defconfig" | head -n 1)
-        CONFIG_NAME=$(basename $CONFIG_FILE)
-        echo "빌드할 설정 파일: $CONFIG_NAME"
+        # 노트 20 모델에 맞는 설정 파일을 자동으로 탐색하여 빌드
+        # c1s, d2s, t2s 등 모델별 defconfig가 존재하므로 이를 자동 적용
+        DEFCONFIG=$(ls arch/arm64/configs/vendor/*_defconfig | head -n 1)
+        echo "선택된 설정 파일: $DEFCONFIG"
         
-        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $CONFIG_NAME
+        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $(basename $DEFCONFIG)
         make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
     - name: Upload Artifact
