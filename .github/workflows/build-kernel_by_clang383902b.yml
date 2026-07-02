@@ -61,7 +61,9 @@ jobs:
     - name: Download kernel source
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone https://x-access-token:${{ github.token }}@github.com/Yg0801/android_kernel_samsung_msm8250.git -b thirteen android-kernel --depth=1
+        # config.env에 적힌 KERNEL_SOURCE 주소에서 https://를 떼고 토큰을 붙여 강제 우회 다운로드합니다.
+        CLEAN_URL=$(echo "${{ env.KERNEL_SOURCE }}" | sed 's!https://!!')
+        git clone https://x-access-token:${{ github.token }}@$CLEAN_URL -b ${{ env.KERNEL_SOURCE_BRANCH }} android-kernel --depth=1
 
     - name: Download source boot image
       if: env.BUILD_BOOT_IMG == 'true'
