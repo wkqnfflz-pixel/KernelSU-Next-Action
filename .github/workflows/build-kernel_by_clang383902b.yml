@@ -6,19 +6,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    # 권한 설정 추가: 저장소 접근을 위해 필수
-    permissions:
-      contents: read
     steps:
     - uses: actions/checkout@v4
 
+    # [수정됨] git clone 대신 actions/checkout을 사용하여 권한 문제 해결
     - name: Download kernel source
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/kernel_workspace
-        cd $GITHUB_WORKSPACE/kernel_workspace
-        # HTTPS 대신 별도의 인증 절차 없이 클론할 수 있는 공식적인 주소 확인이 필요하지만,
-        # 일단 깃허브 액션 환경에서 가장 안정적인 방식으로 변경합니다.
-        git clone https://github.com/Yg0801/android_kernel_samsung_msm8250.git -b thirteen android-kernel --depth=1
+      uses: actions/checkout@v4
+      with:
+        repository: Yg0801/android_kernel_samsung_msm8250
+        ref: thirteen
+        path: kernel_workspace/android-kernel
+        depth: 1
 
     - name: Setup build kernel environment
       run: |
@@ -27,8 +25,8 @@ jobs:
 
     - name: Download clang-383902b
       run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone https://github.com/tomxi1997/Toolchain.git clang-aosp --depth=1
+        mkdir -p $GITHUB_WORKSPACE/kernel_workspace/clang-aosp
+        git clone https://github.com/tomxi1997/Toolchain.git $GITHUB_WORKSPACE/kernel_workspace/clang-aosp --depth=1
 
     - name: Build kernel
       run: |
@@ -37,8 +35,8 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # 파일 자동 탐색 및 빌드
-        CONFIG_FILE=$(find arch/arm64/configs/vendor -name "*_defconfig" | head -n 1)
+        # 파일 자동 탐색 및 빌드 (삼성 커널 구조에 맞춤)
+        CONFIG_FILE=$(find arch/arm64/configs -name "*_defconfig" | head -n 1)
         CONFIG_NAME=$(basename $CONFIG_FILE)
         echo "선택된 설정 파일: $CONFIG_NAME"
         
