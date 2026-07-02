@@ -1,4 +1,4 @@
-name: Build kernel by clang-r383902b
+name: Build Note20 Kernel
 
 on:
   workflow_dispatch:
@@ -9,42 +9,36 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # [수정됨] git clone 대신 actions/checkout을 사용하여 권한 문제 해결
     - name: Download kernel source
       uses: actions/checkout@v4
       with:
-        repository: Yg0801/android_kernel_samsung_msm8250
-        ref: thirteen
+        repository: samsungopensource/samsung-kernel-n98x
+        ref: main
         path: kernel_workspace/android-kernel
-        depth: 1
+        fetch-depth: 1
 
-    - name: Setup build kernel environment
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt install -y curl python2 llvm lld wget vim git ccache automake flex lzop bison gperf build-essential zip zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler kmod python3 python3-pip
+        sudo apt install -y build-essential bc flex bison libssl-dev libelf-dev clang lld llvm
 
-    - name: Download clang-383902b
+    - name: Download Clang Toolchain
       run: |
         mkdir -p $GITHUB_WORKSPACE/kernel_workspace/clang-aosp
         git clone https://github.com/tomxi1997/Toolchain.git $GITHUB_WORKSPACE/kernel_workspace/clang-aosp --depth=1
 
-    - name: Build kernel
+    - name: Build Kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        export KBUILD_BUILD_HOST=Github-Action
-        export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # 파일 자동 탐색 및 빌드 (삼성 커널 구조에 맞춤)
-        CONFIG_FILE=$(find arch/arm64/configs -name "*_defconfig" | head -n 1)
-        CONFIG_NAME=$(basename $CONFIG_FILE)
-        echo "선택된 설정 파일: $CONFIG_NAME"
-        
-        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- $CONFIG_NAME
-        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
+        # 삼성 기기는 defconfig가 arch/arm64/configs/ 에 있습니다.
+        # n981(노트20)용 설정을 사용합니다.
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang c1s_defconfig
+        make -j$(nproc) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang
 
-    - name: Upload Artifact
+    - name: Upload Result
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-build-result
+        name: kernel-image
         path: kernel_workspace/android-kernel/out/arch/arm64/boot/Image
