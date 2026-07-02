@@ -1,4 +1,4 @@
-name: Build Note20 Kernel
+name: Build Note20 Exynos990 Kernel
 
 on:
   workflow_dispatch:
@@ -7,39 +7,31 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Download kernel source
+    - name: Checkout Source
       uses: actions/checkout@v4
       with:
-        # 이 저장소는 공개 저장소이며, SM8250(노트20 칩셋)용 커널입니다.
-        repository: kdrag0n/kernel_samsung_sm8250
+        repository: n0n3m4/kernel_samsung_exynos990
         ref: main
-        path: kernel_workspace/android-kernel
+        path: kernel
         fetch-depth: 1
 
     - name: Build Kernel
       run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        
-        # 1. 의존성 설치 (필수)
+        cd kernel
         sudo apt-get update
-        sudo apt-get install -y build-essential bc flex bison libssl-dev libelf-dev clang lld llvm wget git
+        sudo apt-get install -y build-essential bc flex bison libssl-dev libelf-dev clang lld llvm
         
-        # 2. 컴파일러 설정 (최신 빌드를 위해 환경변수 지정)
         export ARCH=arm64
-        export SUBARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
         
-        # 3. 설정 파일 적용 (노트20용 d2s_defconfig 사용)
-        # d2s는 노트20 울트라/일반 모델의 커널 명칭입니다.
-        make O=out $ARCH CROSS_COMPILE=$CROSS_COMPILE d2s_defconfig
+        # 1. 설정 파일 적용 (노트20은 보통 c1s_defconfig 사용)
+        make O=out $ARCH CROSS_COMPILE=$CROSS_COMPILE c1s_defconfig
         
-        # 4. 빌드 시작
+        # 2. 빌드 시작
         make -j$(nproc) O=out $ARCH CROSS_COMPILE=$CROSS_COMPILE
 
-    - name: Upload Result
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-image
-        path: kernel_workspace/android-kernel/out/arch/arm64/boot/Image
+        name: kernel-result
+        path: kernel/out/arch/arm64/boot/Image
