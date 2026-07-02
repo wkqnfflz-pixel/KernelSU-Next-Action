@@ -12,30 +12,31 @@ jobs:
     - name: Download kernel source
       uses: actions/checkout@v4
       with:
-        repository: samsungopensource/samsung-kernel-n98x
+        # 이 저장소는 공개 저장소이며, SM8250(노트20 칩셋)용 커널입니다.
+        repository: kdrag0n/kernel_samsung_sm8250
         ref: main
         path: kernel_workspace/android-kernel
         fetch-depth: 1
 
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt install -y build-essential bc flex bison libssl-dev libelf-dev clang lld llvm
-
-    - name: Download Clang Toolchain
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/kernel_workspace/clang-aosp
-        git clone https://github.com/tomxi1997/Toolchain.git $GITHUB_WORKSPACE/kernel_workspace/clang-aosp --depth=1
-
     - name: Build Kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/google_clang/clang-r383902b-11.0.2/bin:$PATH
         
-        # 삼성 기기는 defconfig가 arch/arm64/configs/ 에 있습니다.
-        # n981(노트20)용 설정을 사용합니다.
-        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang c1s_defconfig
-        make -j$(nproc) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang
+        # 1. 의존성 설치 (필수)
+        sudo apt-get update
+        sudo apt-get install -y build-essential bc flex bison libssl-dev libelf-dev clang lld llvm wget git
+        
+        # 2. 컴파일러 설정 (최신 빌드를 위해 환경변수 지정)
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        
+        # 3. 설정 파일 적용 (노트20용 d2s_defconfig 사용)
+        # d2s는 노트20 울트라/일반 모델의 커널 명칭입니다.
+        make O=out $ARCH CROSS_COMPILE=$CROSS_COMPILE d2s_defconfig
+        
+        # 4. 빌드 시작
+        make -j$(nproc) O=out $ARCH CROSS_COMPILE=$CROSS_COMPILE
 
     - name: Upload Result
       uses: actions/upload-artifact@v4
